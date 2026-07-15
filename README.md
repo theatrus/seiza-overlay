@@ -18,7 +18,11 @@ The library deliberately keeps rendering separate from application chrome:
 ## Usage
 
 ```tsx
-import { defaultOverlayLayers } from '@seiza/astro-overlay'
+import {
+  defaultOverlayDensity,
+  defaultOverlayLayers,
+  defaultOverlayTheme,
+} from '@seiza/astro-overlay'
 import { AstroOverlay } from '@seiza/astro-overlay/react'
 
 <div className="image-frame">
@@ -26,10 +30,21 @@ import { AstroOverlay } from '@seiza/astro-overlay/react'
   <AstroOverlay
     solution={solution}
     layers={{ ...defaultOverlayLayers, field_stars: false }}
-    theme={{ markerStrokeWidth: 0.9, gridStrokeWidth: 0.75 }}
+    density={defaultOverlayDensity}
+    theme={{
+      ...defaultOverlayTheme,
+      labelFontWeight: 450,
+      markerStrokeWidth: 0.75,
+    }}
   />
 </div>
 ```
+
+The production defaults use normal-weight object labels (`400`), medium grid
+labels (`500`), a `0.1em` label halo, `0.7px` object markers, and a `0.6`
+prominence density. Stroke widths, font weights, halo width, opacity, colors,
+font families, and density are all typed overrides. The corresponding stable
+CSS custom properties remain available for application stylesheets.
 
 The application owns the transformed image container, controls, control
 placement, layer persistence, API calls, and branding. Stable

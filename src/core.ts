@@ -6,7 +6,26 @@ import type {
   OverlayLayerVisibility,
   OverlayObject,
   OverlaySolutionWithWcs,
+  OverlayTheme,
 } from './types.js'
+
+/**
+ * Balanced browser defaults derived from Tenrankai's production overlay.
+ * Consumers can spread this object and override only the values they need.
+ */
+export const defaultOverlayTheme: Readonly<OverlayTheme> = Object.freeze({
+  gridStrokeWidth: 0.65,
+  markerStrokeWidth: 0.7,
+  movingMarkerStrokeWidth: 0.95,
+  fieldStarStrokeWidth: 0.65,
+  centerStrokeWidth: 0.75,
+  labelFontWeight: 400,
+  gridFontWeight: 500,
+  labelHaloWidthEm: 0.1,
+})
+
+/** Fraction of ranked objects shown when a consumer does not choose a density. */
+export const defaultOverlayDensity = 0.6
 
 export const defaultOverlayLayers: Readonly<Record<DefaultOverlayLayerId, boolean>> = {
   deep_sky: true,
@@ -85,7 +104,7 @@ export function partitionOverlayObjects(
     .sort((left, right) => (right.prominence ?? 0) - (left.prominence ?? 0))
   const unrankable = inFrame.filter((object) => !Number.isFinite(object.prominence))
   const floor = Math.min(rankable.length, options.minimumRankedObjects ?? 4)
-  const density = clamp(options.density ?? 1, 0, 1)
+  const density = clamp(options.density ?? defaultOverlayDensity, 0, 1)
   const budget = Math.max(
     floor,
     Math.round(floor + (rankable.length - floor) * density),

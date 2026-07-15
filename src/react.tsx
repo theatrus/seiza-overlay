@@ -3,7 +3,9 @@ import {
   clamp,
   defaultLabelForObject,
   defaultLayerForObject,
+  defaultOverlayDensity,
   defaultOverlayLayers,
+  defaultOverlayTheme,
   gridLabelFontSize,
   makeCoordinateGrid,
   movingBodyTail,
@@ -23,7 +25,7 @@ const embeddedStyles = `
   .coordinate-grid path, .seiza-overlay__grid-line {
     fill: none;
     stroke: var(--seiza-overlay-grid-color, #7ddbe8);
-    stroke-width: var(--seiza-overlay-grid-stroke-width, .85);
+    stroke-width: var(--seiza-overlay-grid-stroke-width, ${defaultOverlayTheme.gridStrokeWidth});
     stroke-dasharray: var(--seiza-overlay-grid-dasharray, 7 5);
     opacity: var(--seiza-overlay-grid-opacity, .72);
     vector-effect: non-scaling-stroke;
@@ -31,38 +33,38 @@ const embeddedStyles = `
   .coordinate-grid text, .seiza-overlay__grid-label {
     fill: var(--seiza-overlay-grid-label-color, #b9f3f7);
     stroke: var(--seiza-overlay-label-halo-color, #05090e);
-    stroke-width: var(--seiza-overlay-label-halo-width, .1em);
+    stroke-width: var(--seiza-overlay-label-halo-width, ${defaultOverlayTheme.labelHaloWidthEm}em);
     paint-order: stroke;
     font-family: var(--seiza-overlay-grid-font-family, ui-monospace, monospace);
-    font-weight: var(--seiza-overlay-grid-font-weight, 700);
+    font-weight: var(--seiza-overlay-grid-font-weight, ${defaultOverlayTheme.gridFontWeight});
   }
   .field-stars circle, .seiza-overlay__field-star {
     fill: none;
     stroke: var(--seiza-overlay-field-star-color, #eef7ff);
-    stroke-width: var(--seiza-overlay-field-star-stroke-width, .85);
+    stroke-width: var(--seiza-overlay-field-star-stroke-width, ${defaultOverlayTheme.fieldStarStrokeWidth});
     opacity: .78;
     vector-effect: non-scaling-stroke;
   }
   .object-marker, .seiza-overlay__marker {
     fill: none;
-    stroke-width: var(--seiza-overlay-marker-stroke-width, 1);
+    stroke-width: var(--seiza-overlay-marker-stroke-width, ${defaultOverlayTheme.markerStrokeWidth});
     opacity: var(--seiza-overlay-marker-opacity, .88);
     vector-effect: non-scaling-stroke;
   }
   .seiza-overlay__marker--moving, .seiza-overlay__marker--transient {
-    stroke-width: var(--seiza-overlay-moving-marker-stroke-width, 1.25);
+    stroke-width: var(--seiza-overlay-moving-marker-stroke-width, ${defaultOverlayTheme.movingMarkerStrokeWidth});
   }
   .overlay-label, .seiza-overlay__label {
     stroke: var(--seiza-overlay-label-halo-color, rgba(0, 0, 0, .88));
-    stroke-width: var(--seiza-overlay-label-halo-width, .1em);
+    stroke-width: var(--seiza-overlay-label-halo-width, ${defaultOverlayTheme.labelHaloWidthEm}em);
     paint-order: stroke;
     font-family: var(--seiza-overlay-label-font-family, ui-sans-serif, system-ui, sans-serif);
-    font-weight: var(--seiza-overlay-label-font-weight, 700);
+    font-weight: var(--seiza-overlay-label-font-weight, ${defaultOverlayTheme.labelFontWeight});
   }
   .solution-center, .seiza-overlay__center {
     fill: none;
     stroke: var(--seiza-overlay-center-color, #f2c66d);
-    stroke-width: var(--seiza-overlay-center-stroke-width, 1);
+    stroke-width: var(--seiza-overlay-center-stroke-width, ${defaultOverlayTheme.centerStrokeWidth});
     vector-effect: non-scaling-stroke;
   }
   .direction-tail { stroke-linecap: round; stroke-linejoin: round; }
@@ -86,7 +88,7 @@ export function AstroOverlay({
   solution,
   objects = solution.objects ?? [],
   layers = defaultOverlayLayers,
-  density = 1,
+  density = defaultOverlayDensity,
   minimumRankedObjects = 4,
   layerForObject = defaultLayerForObject,
   labelForObject = defaultLabelForObject,

@@ -95,10 +95,12 @@ export interface OverlayTheme {
   gridDasharray?: string
   labelFontFamily?: string
   gridFontFamily?: string
-  labelFontWeight?: number
-  gridFontWeight?: number
+  labelFontWeight?: OverlayFontWeight
+  gridFontWeight?: OverlayFontWeight
   labelHaloWidthEm?: number
 }
+
+export type OverlayFontWeight = number | 'normal' | 'bold' | 'lighter' | 'bolder'
 
 export type OverlayLayerResolver = (object: OverlayObject) => string
 export type OverlayLabelFormatter = (object: OverlayObject) => string

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   countOverlayObjects,
+  defaultOverlayDensity,
   defaultOverlayLayers,
+  defaultOverlayTheme,
   formatDec,
   formatRa,
   makeCoordinateGrid,
@@ -41,6 +43,17 @@ function object(partial: Partial<OverlayObject> = {}): OverlayObject {
 }
 
 describe('overlay layers and density', () => {
+  it('publishes the production rendering defaults for consumers to override', () => {
+    expect(defaultOverlayDensity).toBe(0.6)
+    expect(defaultOverlayTheme).toMatchObject({
+      labelFontWeight: 400,
+      gridFontWeight: 500,
+      markerStrokeWidth: 0.7,
+      gridStrokeWidth: 0.65,
+      labelHaloWidthEm: 0.1,
+    })
+  })
+
   it('keeps historical transients and field stars off by default', () => {
     const objects = [
       object(),
@@ -75,6 +88,21 @@ describe('overlay layers and density', () => {
     expect(result.rendered[0]?.name).toBe('SN current')
     expect(result.rendered.some((entry) => entry.name === 'NGC 11')).toBe(true)
     expect(result.rendered.some((entry) => entry.name === 'NGC 0')).toBe(false)
+  })
+
+  it('uses the exported density when no consumer override is provided', () => {
+    const ranked = Array.from({ length: 12 }, (_, index) => object({
+      name: `NGC ${index}`,
+      prominence: index / 12,
+      x: 50 + index * 70,
+    }))
+    const transient = object({ name: 'SN current', kind: 'transient', prominence: null })
+    const result = partitionOverlayObjects(
+      [...ranked, transient],
+      solution.image_width,
+      solution.image_height,
+    )
+    expect(result.rendered).toHaveLength(10)
   })
 
   it('counts default and historical layers independently', () => {

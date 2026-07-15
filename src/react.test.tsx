@@ -29,6 +29,28 @@ describe('AstroOverlay', () => {
     expect(markup).toContain('data-kind="galaxy"')
     expect(markup).toContain('NGC 224 · Andromeda Galaxy')
     expect(markup).not.toContain('class="coordinate-grid seiza-overlay__grid"')
+    expect(markup).toContain('font-weight: var(--seiza-overlay-label-font-weight, 400)')
+    expect(markup).toContain('font-weight: var(--seiza-overlay-grid-font-weight, 500)')
+    expect(markup).toContain('stroke-width: var(--seiza-overlay-marker-stroke-width, 0.7)')
+  })
+
+  it('writes consumer weight overrides inline for SVG and PNG rendering', () => {
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution: objectOnlySolution,
+      density: 1,
+      theme: {
+        markerStrokeWidth: 1.1,
+        gridStrokeWidth: 0.8,
+        labelFontWeight: 'bold',
+        gridFontWeight: 650,
+        labelHaloWidthEm: 0.075,
+      },
+    }))
+    expect(markup).toContain('--seiza-overlay-marker-stroke-width:1.1')
+    expect(markup).toContain('--seiza-overlay-grid-stroke-width:0.8')
+    expect(markup).toContain('--seiza-overlay-label-font-weight:bold')
+    expect(markup).toContain('--seiza-overlay-grid-font-weight:650')
+    expect(markup).toContain('--seiza-overlay-label-halo-width:0.075em')
   })
 
   it('uses distinct clip paths when several overlays share one page', () => {
