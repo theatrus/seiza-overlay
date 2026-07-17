@@ -74,4 +74,33 @@ describe('AstroOverlay', () => {
     expect(ids).toHaveLength(2)
     expect(new Set(ids).size).toBe(2)
   })
+
+  it('renders unknown ellipse orientations as circles', () => {
+    const solution: OverlaySolution = {
+      ...objectOnlySolution,
+      objects: [{ ...objectOnlySolution.objects![0]!, angle_deg: null }],
+    }
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, { solution }))
+    expect(markup).toContain('rx="120" ry="120"')
+    expect(markup).toContain('rotate(0)')
+  })
+
+  it('renders projected object outlines instead of the fallback ellipse', () => {
+    const solution: OverlaySolution = {
+      ...objectOnlySolution,
+      objects: [{
+        ...objectOnlySolution.objects![0]!,
+        outlines: [{
+          geometry_id: 'openngc:NGC224#outline-1',
+          level: '1',
+          contours: [{ closed: true, points: [[10, 20], [30, 40], [50, 20]] }],
+        }],
+      }],
+    }
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, { solution }))
+    expect(markup).toContain('class="object-marker seiza-overlay__marker seiza-overlay__marker--outline"')
+    expect(markup).toContain('data-outline-level="1"')
+    expect(markup).toContain('M 10.00 20.00 L 30.00 40.00 L 50.00 20.00 Z')
+    expect(markup).not.toContain('seiza-overlay__marker--extended')
+  })
 })

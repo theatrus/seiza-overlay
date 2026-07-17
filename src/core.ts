@@ -4,6 +4,7 @@ import type {
   OverlayLabelFormatter,
   OverlayLayerResolver,
   OverlayLayerVisibility,
+  OverlayContour,
   OverlayObject,
   OverlaySolutionWithWcs,
   OverlayTheme,
@@ -137,9 +138,12 @@ export function encompassesFrame(
   height: number,
 ) {
   if (object.semi_major_px <= 0) return false
-  const radians = object.angle_deg * Math.PI / 180
+  const radians = (object.angle_deg ?? 0) * Math.PI / 180
   const cos = Math.cos(radians)
   const sin = Math.sin(radians)
+  const minorRadius = object.angle_deg == null
+    ? object.semi_major_px
+    : Math.max(object.semi_minor_px, 1)
   const corners: Array<[number, number]> = [
     [0, 0],
     [width, 0],
@@ -150,9 +154,22 @@ export function encompassesFrame(
     const dx = x - object.x
     const dy = y - object.y
     const u = (dx * cos + dy * sin) / object.semi_major_px
-    const v = (-dx * sin + dy * cos) / Math.max(object.semi_minor_px, 1)
+    const v = (-dx * sin + dy * cos) / minorRadius
     return u * u + v * v <= 1
   })
+}
+
+/** Convert one pixel-space catalog contour into SVG path data. */
+export function overlayContourPath(contour: OverlayContour): string | null {
+  const points = contour.points.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y))
+  const minimumPoints = contour.closed ? 3 : 2
+  if (points.length < minimumPoints) return null
+  const [first, ...rest] = points
+  if (!first) return null
+  const segments = [`M ${first[0].toFixed(2)} ${first[1].toFixed(2)}`]
+  for (const [x, y] of rest) segments.push(`L ${x.toFixed(2)} ${y.toFixed(2)}`)
+  if (contour.closed) segments.push('Z')
+  return segments.join(' ')
 }
 
 export function movingBodyTail(

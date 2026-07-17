@@ -7,6 +7,7 @@ import {
   formatDec,
   formatRa,
   makeCoordinateGrid,
+  overlayContourPath,
   partitionOverlayObjects,
   pixelToWorld,
   worldToPixel,
@@ -141,5 +142,29 @@ describe('WCS and grid geometry', () => {
   it('formats RA and declination at one-tenth-second precision', () => {
     expect(formatRa(0)).toBe('RA 00h00m00.0s')
     expect(formatDec(-4)).toBe('Dec −04°00′00.0″')
+  })
+})
+
+describe('catalog geometry', () => {
+  it('serializes open and closed projected contours', () => {
+    expect(overlayContourPath({
+      closed: true,
+      points: [[1, 2], [3, 4], [5, 6]],
+    })).toBe('M 1.00 2.00 L 3.00 4.00 L 5.00 6.00 Z')
+    expect(overlayContourPath({
+      closed: false,
+      points: [[1, 2], [3, 4]],
+    })).toBe('M 1.00 2.00 L 3.00 4.00')
+  })
+
+  it('treats an unknown ellipse angle as a conservative major-axis circle', () => {
+    const field = object({
+      x: 50,
+      y: 50,
+      semi_major_px: 80,
+      semi_minor_px: 10,
+      angle_deg: null,
+    })
+    expect(partitionOverlayObjects([field], 100, 100).encompassing).toHaveLength(1)
   })
 })

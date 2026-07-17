@@ -1,15 +1,14 @@
 # `@seiza/astro-overlay`
 
-Reusable astronomical image overlays for Seiza-based applications. This is the
-canonical package repository; the first npm release will be published as
-`@seiza/astro-overlay` after the `@seiza` npm scope and trusted publisher are
-configured.
+Reusable astronomical image overlays for Seiza-based applications, published
+as `@seiza/astro-overlay`.
 
 The library deliberately keeps rendering separate from application chrome:
 
 - `@seiza/astro-overlay` provides response types, layer classification,
   prominence-based density selection, WCS transforms, coordinate-grid geometry,
-  and marker geometry.
+  marker geometry, projected catalog contours, and conservative rendering for
+  catalog ellipses whose orientation is unknown.
 - `@seiza/astro-overlay/react` provides the SVG-only `AstroOverlay` component.
   It renders no buttons or panels and does not fetch data.
 - `@seiza/astro-overlay/export` serializes the live SVG and composites it over a

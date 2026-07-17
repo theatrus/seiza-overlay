@@ -20,6 +20,20 @@ export interface WcsSolution {
   equinox?: number
 }
 
+export interface OverlayContour {
+  closed: boolean
+  points: ReadonlyArray<readonly [number, number]>
+}
+
+export interface OverlayOutline {
+  geometry_id?: string
+  source_record_id?: string
+  role?: string
+  quality?: string
+  level?: string | null
+  contours: readonly OverlayContour[]
+}
+
 export interface OverlayObject {
   stable_id?: string
   name: string
@@ -30,8 +44,10 @@ export interface OverlayObject {
   y: number
   semi_major_px: number
   semi_minor_px: number
-  angle_deg: number
+  /** Null when an asymmetric catalog extent has no known orientation. */
+  angle_deg: number | null
   source?: string
+  catalog_source?: string
   aliases?: string[]
   parent_ids?: string[]
   alternate_ids?: string[]
@@ -44,6 +60,8 @@ export interface OverlayObject {
   distance_au?: number
   direction_pa_deg?: number
   direction_angle_deg?: number
+  /** Pixel-projected catalog contours, grouped by source geometry. */
+  outlines?: readonly OverlayOutline[]
 }
 
 export interface OverlaySolution {
