@@ -9,6 +9,7 @@ import {
   gridLabelFontSize,
   makeCoordinateGrid,
   movingBodyTail,
+  overlayContourPath,
   partitionOverlayObjects,
 } from './core.js'
 import type {
@@ -201,6 +202,17 @@ export function AstroOverlay({
         const color = objectColor(object)
         const a = Math.max(object.semi_major_px, fontSize)
         const b = Math.max(object.semi_minor_px, fontSize)
+        const outlinePaths = (object.outlines ?? []).flatMap((outline, outlineIndex) =>
+          outline.contours.flatMap((contour, contourIndex) => {
+            const path = overlayContourPath(contour)
+            return path == null ? [] : [{
+              path,
+              key: `${outline.geometry_id ?? outlineIndex}-${contourIndex}`,
+              geometryId: outline.geometry_id,
+              level: outline.level,
+            }]
+          }),
+        )
         const directionTail = moving && object.direction_angle_deg != null
           ? movingBodyTail(object.x, object.y, a, object.direction_angle_deg, object.kind)
           : null
@@ -227,14 +239,23 @@ export function AstroOverlay({
             className="object-marker seiza-overlay__marker seiza-overlay__marker--star"
             stroke={color}
             d={`M ${object.x - a} ${object.y} H ${object.x - a / 3} M ${object.x + a / 3} ${object.y} H ${object.x + a}`}
-          /> : <ellipse
+          /> : outlinePaths.length > 0 ? <g className="seiza-overlay__outlines">
+            {outlinePaths.map((outline) => <path
+              key={outline.key}
+              className="object-marker seiza-overlay__marker seiza-overlay__marker--outline"
+              data-geometry-id={outline.geometryId}
+              data-outline-level={outline.level ?? undefined}
+              stroke={color}
+              d={outline.path}
+            />)}
+          </g> : <ellipse
             className="object-marker seiza-overlay__marker seiza-overlay__marker--extended"
             stroke={color}
             cx={0}
             cy={0}
             rx={a}
-            ry={b}
-            transform={`translate(${object.x} ${object.y}) rotate(${object.angle_deg})`}
+            ry={object.angle_deg == null ? a : b}
+            transform={`translate(${object.x} ${object.y}) rotate(${object.angle_deg ?? 0})`}
           />}
           <text
             className="overlay-label seiza-overlay__label"
