@@ -122,3 +122,5 @@ export type OverlayFontWeight = number | 'normal' | 'bold' | 'lighter' | 'bolder
 
 export type OverlayLayerResolver = (object: OverlayObject) => string
 export type OverlayLabelFormatter = (object: OverlayObject) => string
+/** Return a CSS color for an object, or undefined to retain the theme color. */
+export type OverlayColorResolver = (object: OverlayObject) => string | undefined

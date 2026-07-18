@@ -12,6 +12,12 @@ import {
   pixelToWorld,
   worldToPixel,
 } from './core.js'
+import {
+  suggestedDeepSkyCatalogColors,
+  suggestedDeepSkyCatalogForObject,
+  suggestedDeepSkyColorForObject,
+  suggestedDeepSkyLayerForObject,
+} from './catalogs.js'
 import type { OverlayObject, OverlaySolution } from './types.js'
 
 const solution: OverlaySolution = {
@@ -146,6 +152,34 @@ describe('WCS and grid geometry', () => {
 })
 
 describe('catalog geometry', () => {
+  it('publishes the suggested deep-sky catalog palette and resolvers', () => {
+    const ngc = object({ name: 'NGC 7000' })
+    expect(suggestedDeepSkyCatalogForObject(ngc)).toBe('ngc')
+    expect(suggestedDeepSkyColorForObject(ngc)).toBe(suggestedDeepSkyCatalogColors.ngc)
+    expect(suggestedDeepSkyLayerForObject(ngc)).toBe('deep-sky:ngc')
+    expect(suggestedDeepSkyCatalogForObject(object({ kind: 'star' }))).toBeNull()
+    expect(suggestedDeepSkyColorForObject(object({ kind: 'star' }))).toBeUndefined()
+    expect(suggestedDeepSkyLayerForObject(object({ kind: 'star' }))).toBe('named_stars')
+  })
+
+  it.each([
+    ['M 31', 'messier'],
+    ['NGC 7000', 'ngc'],
+    ['IC 434', 'ic'],
+    ['Sh 2-240', 'sharpless-vdb'],
+    ['vdB 142', 'sharpless-vdb'],
+    ['LBN 437', 'lbn'],
+    ['Cederblad 214', 'cederblad'],
+    ['LDN 1622', 'dark-nebulae'],
+    ['B 33', 'dark-nebulae'],
+    ['SNR G180.0-01.7', 'snr'],
+    ['UGC 454', 'ugc'],
+    ['PGC 2557', 'pgc'],
+    ['Abell 426', 'other-deep-sky'],
+  ] as const)('classifies %s as %s', (name, catalog) => {
+    expect(suggestedDeepSkyCatalogForObject(object({ name }))).toBe(catalog)
+  })
+
   it('serializes open and closed projected contours', () => {
     expect(overlayContourPath({
       closed: true,

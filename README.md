@@ -21,6 +21,7 @@ import {
   defaultOverlayDensity,
   defaultOverlayLayers,
   defaultOverlayTheme,
+  suggestedDeepSkyColorForObject,
 } from '@seiza/astro-overlay'
 import { AstroOverlay } from '@seiza/astro-overlay/react'
 
@@ -30,6 +31,7 @@ import { AstroOverlay } from '@seiza/astro-overlay/react'
     solution={solution}
     layers={{ ...defaultOverlayLayers, field_stars: false }}
     density={defaultOverlayDensity}
+    colorForObject={suggestedDeepSkyColorForObject}
     theme={{
       ...defaultOverlayTheme,
       labelFontWeight: 450,
@@ -44,6 +46,15 @@ labels (`500`), a `0.1em` label halo, `0.7px` object markers, and a `0.6`
 prominence density. Stroke widths, font weights, halo width, opacity, colors,
 font families, and density are all typed overrides. The corresponding stable
 CSS custom properties remain available for application stylesheets.
+
+`suggestedDeepSkyColorForObject` opts into Seiza's restrained catalog palette
+for deep-sky ellipses, projected outlines, and their labels while leaving stars,
+transients, and moving objects on the active theme. The package also exports
+`suggestedDeepSkyCatalogs`, `suggestedDeepSkyCatalogColors`,
+`suggestedDeepSkyCatalogForObject`, `suggestedDeepSkyCatalogLayer`, and
+`suggestedDeepSkyLayerForObject` for applications that want matching filter
+controls and semantic catalog layers. These are suggested application defaults;
+the renderer's generic theme remains unchanged unless a consumer opts in.
 
 The application owns the transformed image container, controls, control
 placement, layer persistence, API calls, and branding. Stable

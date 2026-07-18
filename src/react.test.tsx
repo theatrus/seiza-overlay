@@ -2,6 +2,7 @@ import { createElement, Fragment } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AstroOverlay } from './react.js'
+import { suggestedDeepSkyColorForObject } from './catalogs.js'
 import type { OverlaySolution } from './types.js'
 
 const objectOnlySolution: OverlaySolution = {
@@ -102,5 +103,24 @@ describe('AstroOverlay', () => {
     expect(markup).toContain('data-outline-level="1"')
     expect(markup).toContain('M 10.00 20.00 L 30.00 40.00 L 50.00 20.00 Z')
     expect(markup).not.toContain('seiza-overlay__marker--extended')
+  })
+
+  it('applies suggested catalog colors directly to outlines and labels', () => {
+    const solution: OverlaySolution = {
+      ...objectOnlySolution,
+      objects: [{
+        ...objectOnlySolution.objects![0]!,
+        outlines: [{
+          geometry_id: 'openngc:NGC224#outline-1',
+          contours: [{ closed: true, points: [[10, 20], [30, 40], [50, 20]] }],
+        }],
+      }],
+    }
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution,
+      colorForObject: suggestedDeepSkyColorForObject,
+    }))
+    expect(markup).toContain('stroke="#55cfff"')
+    expect(markup).toContain('fill="#55cfff"')
   })
 })
