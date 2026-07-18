@@ -7,6 +7,8 @@ import {
   formatDec,
   formatRa,
   makeCoordinateGrid,
+  movingBodyTail,
+  movingBodyVectorLength,
   overlayContourPath,
   partitionOverlayObjects,
   pixelToWorld,
@@ -200,5 +202,20 @@ describe('catalog geometry', () => {
       angle_deg: null,
     })
     expect(partitionOverlayObjects([field], 100, 100).encompassing).toHaveLength(1)
+  })
+})
+
+describe('moving-body vectors', () => {
+  it('converts angular speed to a clamped, configurable pixel length', () => {
+    expect(movingBodyVectorLength(10, 20, 2)).toBe(30)
+    expect(movingBodyVectorLength(10, 40, 2)).toBe(60)
+    expect(movingBodyVectorLength(10, 10_000, 2)).toBe(90)
+    expect(movingBodyVectorLength(10, 40, 2, { durationHours: 1 })).toBe(30)
+    expect(movingBodyVectorLength(10, undefined, 2)).toBeNull()
+  })
+
+  it('uses the supplied velocity length while retaining fixed legacy tails', () => {
+    expect(movingBodyTail(100, 100, 10, 0, 'asteroid', 70)).toContain('L 170.00 100.00')
+    expect(movingBodyTail(100, 100, 10, 0, 'asteroid')).toContain('L 145.00 100.00')
   })
 })

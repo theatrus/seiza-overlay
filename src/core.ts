@@ -8,6 +8,7 @@ import type {
   OverlayObject,
   OverlaySolutionWithWcs,
   OverlayTheme,
+  MovingBodyVectorOptions,
 } from './types.js'
 
 /**
@@ -27,6 +28,13 @@ export const defaultOverlayTheme: Readonly<OverlayTheme> = Object.freeze({
 
 /** Fraction of ranked objects shown when a consumer does not choose a density. */
 export const defaultOverlayDensity = 0.6
+
+/** A visible three-hour trail, clamped for very slow and very fast bodies. */
+export const defaultMovingBodyVectorOptions: Readonly<Required<MovingBodyVectorOptions>> = Object.freeze({
+  durationHours: 3,
+  minimumMarkerRadii: 3,
+  maximumMarkerRadii: 9,
+})
 
 export const defaultOverlayLayers: Readonly<Record<DefaultOverlayLayerId, boolean>> = {
   deep_sky: true,
@@ -178,6 +186,7 @@ export function movingBodyTail(
   size: number,
   angleDegrees: number,
   kind: string,
+  vectorLengthPixels?: number | null,
 ) {
   const angle = angleDegrees * Math.PI / 180
   const along = (distance: number) => [
@@ -189,21 +198,71 @@ export function movingBodyTail(
     point[1] + Math.cos(angle) * size * distance,
   ] as const
   const point = (value: readonly [number, number]) => `${value[0].toFixed(2)} ${value[1].toFixed(2)}`
+  const defaultTipDistance = kind === 'comet' ? 4 : 4.5
+  const tipDistance = vectorLengthPixels != null && Number.isFinite(vectorLengthPixels)
+    ? Math.max(Math.abs(vectorLengthPixels) / Math.max(Math.abs(size), Number.EPSILON), 1.5)
+    : defaultTipDistance
 
   if (kind === 'comet') {
     const root = along(1.15)
-    const tip = along(4)
-    const upper = offset(along(3.25), 0.55)
-    const lower = offset(along(3.25), -0.55)
+    const span = tipDistance - 1.15
+    const shoulder = along(1.15 + span * 0.75)
+    const flare = clamp(span * 0.18, 0.35, 0.85)
+    const tip = along(tipDistance)
+    const upper = offset(shoulder, flare)
+    const lower = offset(shoulder, -flare)
     return `M ${point(root)} L ${point(tip)} M ${point(root)} L ${point(upper)} M ${point(root)} L ${point(lower)}`
   }
 
   const root = along(1.2)
-  const tip = along(4.5)
-  const arrowRoot = along(3.6)
-  const upper = offset(arrowRoot, 0.65)
-  const lower = offset(arrowRoot, -0.65)
+  const span = tipDistance - 1.2
+  const tip = along(tipDistance)
+  const arrowRoot = along(1.2 + span * 0.73)
+  const arrowWidth = clamp(span * 0.2, 0.45, 0.9)
+  const upper = offset(arrowRoot, arrowWidth)
+  const lower = offset(arrowRoot, -arrowWidth)
   return `M ${point(root)} L ${point(tip)} M ${point(upper)} L ${point(tip)} L ${point(lower)}`
+}
+
+/**
+ * Convert an apparent angular speed into the number of image pixels travelled
+ * over the configured interval. Invalid or missing metadata returns `null`,
+ * allowing callers to retain a fixed-size legacy direction indicator.
+ */
+export function movingBodyVectorLength(
+  markerSize: number,
+  motionArcsecPerHour: number | null | undefined,
+  pixelScaleArcsecPerPixel: number | null | undefined,
+  options: MovingBodyVectorOptions = {},
+): number | null {
+  if (
+    motionArcsecPerHour == null
+    || pixelScaleArcsecPerPixel == null
+    || !Number.isFinite(motionArcsecPerHour)
+    || !Number.isFinite(pixelScaleArcsecPerPixel)
+    || motionArcsecPerHour < 0
+    || pixelScaleArcsecPerPixel <= 0
+  ) return null
+
+  const size = Math.max(Math.abs(markerSize), Number.EPSILON)
+  const durationHours = Math.max(
+    options.durationHours ?? defaultMovingBodyVectorOptions.durationHours,
+    0,
+  )
+  const minimumMarkerRadii = Math.max(
+    options.minimumMarkerRadii ?? defaultMovingBodyVectorOptions.minimumMarkerRadii,
+    0,
+  )
+  const maximumMarkerRadii = Math.max(
+    options.maximumMarkerRadii ?? defaultMovingBodyVectorOptions.maximumMarkerRadii,
+    minimumMarkerRadii,
+  )
+  const physicalLength = motionArcsecPerHour * durationHours / pixelScaleArcsecPerPixel
+  return clamp(
+    physicalLength,
+    size * minimumMarkerRadii,
+    size * maximumMarkerRadii,
+  )
 }
 
 export function makeCoordinateGrid(solution: OverlaySolutionWithWcs): GridCurve[] {
@@ -429,7 +488,7 @@ const gridSteps = [
   1, 2, 5, 10, 15, 30, 45, 90,
 ]
 
-function pixelScaleFromWcs(wcs: OverlaySolutionWithWcs['wcs']) {
+export function pixelScaleFromWcs(wcs: OverlaySolutionWithWcs['wcs']) {
   const firstAxis = Math.hypot(wcs.cd[0][0], wcs.cd[1][0])
   const secondAxis = Math.hypot(wcs.cd[0][1], wcs.cd[1][1])
   return Math.max((firstAxis + secondAxis) / 2 * 3600, Number.EPSILON)
