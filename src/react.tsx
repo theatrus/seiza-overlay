@@ -14,6 +14,7 @@ import {
 } from './core.js'
 import type {
   OverlayLabelFormatter,
+  OverlayColorResolver,
   OverlayLayerResolver,
   OverlayLayerVisibility,
   OverlayObject,
@@ -81,6 +82,8 @@ export interface AstroOverlayProps extends Omit<SVGProps<SVGSVGElement>, 'childr
   minimumRankedObjects?: number
   layerForObject?: OverlayLayerResolver
   labelForObject?: OverlayLabelFormatter
+  /** Optional per-object colors; undefined results retain theme colors. */
+  colorForObject?: OverlayColorResolver
   theme?: OverlayTheme
   showCenter?: boolean
 }
@@ -93,6 +96,7 @@ export function AstroOverlay({
   minimumRankedObjects = 4,
   layerForObject = defaultLayerForObject,
   labelForObject = defaultLabelForObject,
+  colorForObject,
   theme,
   showCenter = true,
   className,
@@ -199,7 +203,7 @@ export function AstroOverlay({
         const identifiedStar = object.kind === 'identified-star'
         const transient = object.kind === 'transient'
         const moving = object.kind === 'comet' || object.kind === 'asteroid'
-        const color = objectColor(object)
+        const color = colorForObject?.(object) ?? objectColor(object)
         const a = Math.max(object.semi_major_px, fontSize)
         const b = Math.max(object.semi_minor_px, fontSize)
         const outlinePaths = (object.outlines ?? []).flatMap((outline, outlineIndex) =>
@@ -325,6 +329,7 @@ function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
 }
 
 export type {
+  OverlayColorResolver,
   OverlayLayerVisibility,
   OverlayObject,
   OverlaySolution,
