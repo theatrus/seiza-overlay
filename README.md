@@ -31,6 +31,7 @@ import { AstroOverlay } from '@seiza/astro-overlay/react'
     solution={solution}
     layers={{ ...defaultOverlayLayers, field_stars: false }}
     density={defaultOverlayDensity}
+    movingBodyVectors={{ durationHours: 3 }}
     colorForObject={suggestedDeepSkyColorForObject}
     theme={{
       ...defaultOverlayTheme,
@@ -46,6 +47,13 @@ labels (`500`), a `0.1em` label halo, `0.7px` object markers, and a `0.6`
 prominence density. Stroke widths, font weights, halo width, opacity, colors,
 font families, and density are all typed overrides. The corresponding stable
 CSS custom properties remain available for application stylesheets.
+
+Solar-system objects may provide `motion_arcsec_per_hour` alongside their
+image-space `direction_angle_deg`. The React renderer converts that speed and
+the solution pixel scale into a three-hour image-space vector, clamped between
+three and nine marker radii for readability. `movingBodyVectors` can change the
+duration and clamp bounds. Objects without speed metadata retain the legacy
+fixed-size comet tail or asteroid arrow.
 
 `suggestedDeepSkyColorForObject` opts into Seiza's restrained catalog palette
 for deep-sky ellipses, projected outlines, and their labels while leaving stars,

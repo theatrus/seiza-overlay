@@ -123,4 +123,33 @@ describe('AstroOverlay', () => {
     expect(markup).toContain('stroke="#55cfff"')
     expect(markup).toContain('fill="#55cfff"')
   })
+
+  it('renders speed-scaled moving-body vectors with machine-readable metadata', () => {
+    const solution: OverlaySolution = {
+      ...objectOnlySolution,
+      pixel_scale_arcsec_per_pixel: 2,
+      objects: [{
+        ...objectOnlySolution.objects![0]!,
+        stable_id: 'minor-body:12345',
+        name: '(12345)',
+        common_name: 'Test asteroid',
+        kind: 'asteroid',
+        semi_major_px: 0,
+        semi_minor_px: 0,
+        direction_angle_deg: 0,
+        motion_arcsec_per_hour: 20,
+      }],
+    }
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution,
+      movingBodyVectors: {
+        durationHours: 6,
+        minimumMarkerRadii: 1,
+        maximumMarkerRadii: 20,
+      },
+    }))
+    expect(markup).toContain('data-motion-arcsec-per-hour="20"')
+    expect(markup).toContain('data-motion-vector-length="60"')
+    expect(markup).toContain('L 460.00 300.00')
+  })
 })

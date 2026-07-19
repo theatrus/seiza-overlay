@@ -58,6 +58,8 @@ export interface OverlayObject {
   discovered?: string
   near_capture?: boolean
   distance_au?: number
+  /** Apparent angular speed against the stars, in arcseconds per hour. */
+  motion_arcsec_per_hour?: number
   direction_pa_deg?: number
   direction_angle_deg?: number
   /** Pixel-projected catalog contours, grouped by source geometry. */
@@ -116,6 +118,17 @@ export interface OverlayTheme {
   labelFontWeight?: OverlayFontWeight
   gridFontWeight?: OverlayFontWeight
   labelHaloWidthEm?: number
+}
+
+/**
+ * Controls how apparent motion is converted to a visible image-space vector.
+ * The physical length is `speed * duration / pixel scale`, clamped in marker
+ * radii so slow and near-Earth objects both remain legible.
+ */
+export interface MovingBodyVectorOptions {
+  durationHours?: number
+  minimumMarkerRadii?: number
+  maximumMarkerRadii?: number
 }
 
 export type OverlayFontWeight = number | 'normal' | 'bold' | 'lighter' | 'bolder'

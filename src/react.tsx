@@ -9,10 +9,13 @@ import {
   gridLabelFontSize,
   makeCoordinateGrid,
   movingBodyTail,
+  movingBodyVectorLength,
   overlayContourPath,
   partitionOverlayObjects,
+  pixelScaleFromWcs,
 } from './core.js'
 import type {
+  MovingBodyVectorOptions,
   OverlayLabelFormatter,
   OverlayColorResolver,
   OverlayLayerResolver,
@@ -85,6 +88,8 @@ export interface AstroOverlayProps extends Omit<SVGProps<SVGSVGElement>, 'childr
   /** Optional per-object colors; undefined results retain theme colors. */
   colorForObject?: OverlayColorResolver
   theme?: OverlayTheme
+  /** Scale speed-aware body vectors; fixed legacy tails remain when speed is absent. */
+  movingBodyVectors?: MovingBodyVectorOptions
   showCenter?: boolean
 }
 
@@ -98,6 +103,7 @@ export function AstroOverlay({
   labelForObject = defaultLabelForObject,
   colorForObject,
   theme,
+  movingBodyVectors,
   showCenter = true,
   className,
   style,
@@ -121,6 +127,8 @@ export function AstroOverlay({
   )
   const gridFontSize = gridLabelFontSize(width)
   const fontSize = Math.max(width / 75, 14)
+  const pixelScale = solution.pixel_scale_arcsec_per_pixel
+    ?? (solution.wcs ? pixelScaleFromWcs(solution.wcs) : null)
   const frameId = `seiza-overlay-frame-${useId().replace(/:/g, '')}`
   const placedLabels: Array<{ x: number; y: number; halfWidth: number }> = []
   const rootStyle: ThemeStyle = { ...themeVariables(theme), ...style }
@@ -217,8 +225,23 @@ export function AstroOverlay({
             }]
           }),
         )
+        const vectorLength = moving
+          ? movingBodyVectorLength(
+            a,
+            object.motion_arcsec_per_hour,
+            pixelScale,
+            movingBodyVectors,
+          )
+          : null
         const directionTail = moving && object.direction_angle_deg != null
-          ? movingBodyTail(object.x, object.y, a, object.direction_angle_deg, object.kind)
+          ? movingBodyTail(
+            object.x,
+            object.y,
+            a,
+            object.direction_angle_deg,
+            object.kind,
+            vectorLength,
+          )
           : null
         const label = labelPosition(object)
         return <g
@@ -236,6 +259,8 @@ export function AstroOverlay({
             {directionTail && <path
               className={`object-marker direction-tail seiza-overlay__marker seiza-overlay__marker--moving ${object.kind}-tail`}
               data-direction-angle={object.direction_angle_deg}
+              data-motion-arcsec-per-hour={object.motion_arcsec_per_hour}
+              data-motion-vector-length={vectorLength ?? undefined}
               stroke={color}
               d={directionTail}
             />}
