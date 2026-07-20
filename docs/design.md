@@ -19,8 +19,10 @@ The package owns:
 - prominence-based label-density selection from Tenrankai;
 - TAN pixel/world transforms and unclipped RA/Dec grid geometry from
   seiza-server;
-- deep-sky, stellar, transient, comet, asteroid, field-star, and center marker
-  SVG geometry;
+- deep-sky, stellar, transient, comet, asteroid, satellite, field-star, and
+  center marker SVG geometry;
+- canonical satellite prediction-to-outline conversion, including separate
+  pixel-alignment evidence and risk-aware suggested presentation;
 - label collision handling and frame-encompassing captions; and
 - live-SVG serialization plus browser canvas PNG compositing.
 
@@ -63,9 +65,11 @@ Seiza-server already speaks the package's canonical `image_width`,
 camel-case UI toggle state to semantic snake-case layer IDs and consumes the
 suggested catalog exports for matching colors and filter controls.
 
-PSF Guard's in-flight `AstrometrySolutionResponse` is a compatible superset,
-including stable IDs, aliases, hierarchy, and provenance. It can consume the
-component directly when its WCS phase lands.
+PSF Guard's `AstrometrySolutionResponse` is a compatible superset, including
+stable IDs, aliases, hierarchy, and provenance. Its satellite analysis maps
+compact `seiza-satellites` records through `satelliteTrackOverlayObject`, so
+orbital predictions and pixel-corridor matches share geometry without sharing
+application cache or rejection policy.
 
 Tenrankai currently returns `width`, `height`, `scale_arcsec_px`, and a reduced
 object shape. Its fetch hook should normalize those three field names once and

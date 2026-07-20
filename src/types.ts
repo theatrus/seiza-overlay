@@ -5,6 +5,7 @@ export type DefaultOverlayLayerId =
   | 'field_stars'
   | 'transients'
   | 'minor_bodies'
+  | 'satellite_tracks'
   | 'historical_transients'
   | 'grid'
 
@@ -102,17 +103,27 @@ export interface OverlayTheme {
   transientColor?: string
   cometColor?: string
   asteroidColor?: string
+  satelliteLowColor?: string
+  satellitePossibleColor?: string
+  satelliteHighColor?: string
+  satelliteAlignedColor?: string
   centerColor?: string
   labelHaloColor?: string
   encompassingColor?: string
   gridStrokeWidth?: number
   markerStrokeWidth?: number
   movingMarkerStrokeWidth?: number
+  satelliteTrackStrokeWidth?: number
+  satelliteHighRiskStrokeWidth?: number
+  satelliteAlignedStrokeWidth?: number
   fieldStarStrokeWidth?: number
   centerStrokeWidth?: number
   gridOpacity?: number
   markerOpacity?: number
+  satellitePredictionOpacity?: number
+  satelliteAlignedPredictionOpacity?: number
   gridDasharray?: string
+  satelliteTrackDasharray?: string
   labelFontFamily?: string
   gridFontFamily?: string
   labelFontWeight?: OverlayFontWeight

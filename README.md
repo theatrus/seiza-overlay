@@ -21,6 +21,7 @@ import {
   defaultOverlayDensity,
   defaultOverlayLayers,
   defaultOverlayTheme,
+  satelliteTrackOverlayObject,
   suggestedDeepSkyColorForObject,
 } from '@seiza/astro-overlay'
 import { AstroOverlay } from '@seiza/astro-overlay/react'
@@ -29,6 +30,15 @@ import { AstroOverlay } from '@seiza/astro-overlay/react'
   <img src={previewUrl} alt="" />
   <AstroOverlay
     solution={solution}
+    objects={[
+      ...(solution.objects ?? []),
+      ...satelliteTracks.map((track) => satelliteTrackOverlayObject({
+        label: track.label,
+        noradId: track.norad_id,
+        riskLevel: track.risk.level,
+        segments: track.segments,
+      })),
+    ]}
     layers={{ ...defaultOverlayLayers, field_stars: false }}
     density={defaultOverlayDensity}
     movingBodyVectors={{ durationHours: 3 }}
@@ -63,6 +73,16 @@ transients, and moving objects on the active theme. The package also exports
 `suggestedDeepSkyLayerForObject` for applications that want matching filter
 controls and semantic catalog layers. These are suggested application defaults;
 the renderer's generic theme remains unchanged unless a consumer opts in.
+
+Satellite predictions use the built-in `satellite_tracks` layer. Normalize an
+application response with `satelliteTrackOverlayObject`; it preserves the
+orbital prediction as a `predicted-track` outline and, when supplied, keeps
+pixel evidence as a separate `pixel-aligned-track` outline. Risk colors and
+line treatment are generalized from PSF Guard: low-risk unconfirmed paths are
+dashed cyan, possible paths are amber, high-risk paths are red, and aligned
+pixel evidence is a distinct solid green. The adapter never turns a prediction
+into a pixel detection. `suggestedSatelliteTrackColors`, typed theme fields,
+and stable CSS variables allow applications to tune this presentation.
 
 The application owns the transformed image container, controls, control
 placement, layer persistence, API calls, and branding. Stable

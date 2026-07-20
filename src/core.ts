@@ -10,6 +10,7 @@ import type {
   OverlayTheme,
   MovingBodyVectorOptions,
 } from './types.js'
+import { satelliteTrackLayerId } from './satellites.js'
 
 /**
  * Balanced browser defaults derived from Tenrankai's production overlay.
@@ -19,11 +20,21 @@ export const defaultOverlayTheme: Readonly<OverlayTheme> = Object.freeze({
   gridStrokeWidth: 0.65,
   markerStrokeWidth: 0.7,
   movingMarkerStrokeWidth: 0.95,
+  satelliteTrackStrokeWidth: 2,
+  satelliteHighRiskStrokeWidth: 2.5,
+  satelliteAlignedStrokeWidth: 4,
   fieldStarStrokeWidth: 0.65,
   centerStrokeWidth: 0.75,
   labelFontWeight: 400,
   gridFontWeight: 500,
   labelHaloWidthEm: 0.1,
+  satelliteLowColor: '#43d9e6',
+  satellitePossibleColor: '#ffd166',
+  satelliteHighColor: '#ff4d5a',
+  satelliteAlignedColor: '#7cff6b',
+  satellitePredictionOpacity: 1,
+  satelliteAlignedPredictionOpacity: 0.72,
+  satelliteTrackDasharray: '8 6',
 })
 
 /** Fraction of ranked objects shown when a consumer does not choose a density. */
@@ -43,6 +54,7 @@ export const defaultOverlayLayers: Readonly<Record<DefaultOverlayLayerId, boolea
   field_stars: false,
   transients: true,
   minor_bodies: true,
+  satellite_tracks: true,
   historical_transients: false,
   grid: true,
 }
@@ -53,6 +65,7 @@ export const defaultLayerForObject: OverlayLayerResolver = (object) => {
   if (object.kind === 'star' || object.kind === 'double-star') return 'named_stars'
   if (object.kind === 'transient') return 'transients'
   if (object.kind === 'comet' || object.kind === 'asteroid') return 'minor_bodies'
+  if (object.kind === 'satellite') return satelliteTrackLayerId
   return 'deep_sky'
 }
 
