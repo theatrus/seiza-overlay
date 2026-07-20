@@ -62,6 +62,7 @@ const nonDeepSkyKinds = new Set([
   'transient',
   'comet',
   'asteroid',
+  'satellite',
 ])
 
 /** Classify a deep-sky object by its primary catalog designation. */

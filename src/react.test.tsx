@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AstroOverlay } from './react.js'
 import { suggestedDeepSkyColorForObject } from './catalogs.js'
+import { satelliteTrackOverlayObject } from './satellites.js'
 import type { OverlaySolution } from './types.js'
 
 const objectOnlySolution: OverlaySolution = {
@@ -151,5 +152,66 @@ describe('AstroOverlay', () => {
     expect(markup).toContain('data-motion-arcsec-per-hour="20"')
     expect(markup).toContain('data-motion-vector-length="60"')
     expect(markup).toContain('L 460.00 300.00')
+  })
+
+  it('renders risk-colored predictions and pixel evidence without conflating them', () => {
+    const satellite = satelliteTrackOverlayObject({
+      label: 'ISS (ZARYA) [25544]',
+      noradId: 25544,
+      riskLevel: 'high',
+      segments: [
+        { start: [10, 20], end: [100, 120] },
+        { start: [100, 120], end: [180, 140] },
+      ],
+      pixelAlignment: {
+        status: 'detected',
+        segments: [
+          { start: [14, 25], end: [100, 120] },
+          { start: [100, 120], end: [184, 145] },
+        ],
+      },
+    })
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution: { ...objectOnlySolution, objects: [satellite] },
+      showCenter: false,
+    }))
+
+    expect(markup.match(/data-outline-role="predicted-track"/g)).toHaveLength(2)
+    expect(markup.match(/data-outline-role="pixel-aligned-track"/g)).toHaveLength(2)
+    expect(markup).toContain('data-layer="satellite_tracks"')
+    expect(markup).toContain('data-satellite-risk="high"')
+    expect(markup).toContain('stroke="var(--seiza-overlay-satellite-high-color, #ff4d5a)"')
+    expect(markup).toContain('stroke="var(--seiza-overlay-satellite-aligned-color, #7cff6b)"')
+    expect(markup).toContain('seiza-overlay__marker--satellite-with-alignment')
+    expect(markup).toContain('seiza-overlay__marker--satellite-aligned')
+    expect(markup).toContain('ISS (ZARYA) [25544] · pixel match')
+  })
+
+  it('uses a dashed cyan prediction for a low-risk unconfirmed crossing', () => {
+    const satellite = satelliteTrackOverlayObject({
+      label: 'NORAD 1',
+      riskLevel: 'low',
+      segments: [{ start: [10, 20], end: [100, 120] }],
+    })
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution: { ...objectOnlySolution, objects: [satellite] },
+      showCenter: false,
+    }))
+    expect(markup).toContain('seiza-overlay__marker--satellite-dashed')
+    expect(markup).toContain('stroke="var(--seiza-overlay-satellite-low-color, #43d9e6)"')
+  })
+
+  it('does not turn invalid or empty track geometry into a fallback ellipse', () => {
+    const satellite = satelliteTrackOverlayObject({
+      label: 'NORAD 1',
+      segments: [{ start: [Number.NaN, 20], end: [100, 120] }],
+    })
+    const markup = renderToStaticMarkup(createElement(AstroOverlay, {
+      solution: { ...objectOnlySolution, objects: [satellite] },
+      showCenter: false,
+    }))
+    expect(markup).not.toContain('data-kind="satellite"')
+    expect(markup).not.toContain('seiza-overlay__marker--extended')
+    expect(markup).not.toContain('NORAD 1')
   })
 })

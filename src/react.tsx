@@ -14,6 +14,10 @@ import {
   partitionOverlayObjects,
   pixelScaleFromWcs,
 } from './core.js'
+import {
+  satelliteTrackHasPixelAlignment,
+  satelliteTrackRiskLevelForObject,
+} from './satellites.js'
 import type {
   MovingBodyVectorOptions,
   OverlayLabelFormatter,
@@ -58,6 +62,23 @@ const embeddedStyles = `
   }
   .seiza-overlay__marker--moving, .seiza-overlay__marker--transient {
     stroke-width: var(--seiza-overlay-moving-marker-stroke-width, ${defaultOverlayTheme.movingMarkerStrokeWidth});
+  }
+  .seiza-overlay__marker--satellite {
+    stroke-width: var(--seiza-overlay-satellite-track-stroke-width, ${defaultOverlayTheme.satelliteTrackStrokeWidth});
+    opacity: var(--seiza-overlay-satellite-prediction-opacity, ${defaultOverlayTheme.satellitePredictionOpacity});
+  }
+  .seiza-overlay__marker--satellite-high {
+    stroke-width: var(--seiza-overlay-satellite-high-risk-stroke-width, ${defaultOverlayTheme.satelliteHighRiskStrokeWidth});
+  }
+  .seiza-overlay__marker--satellite-dashed {
+    stroke-dasharray: var(--seiza-overlay-satellite-track-dasharray, ${defaultOverlayTheme.satelliteTrackDasharray});
+  }
+  .seiza-overlay__marker--satellite-with-alignment {
+    opacity: var(--seiza-overlay-satellite-aligned-prediction-opacity, ${defaultOverlayTheme.satelliteAlignedPredictionOpacity});
+  }
+  .seiza-overlay__marker--satellite-aligned {
+    stroke-width: var(--seiza-overlay-satellite-aligned-stroke-width, ${defaultOverlayTheme.satelliteAlignedStrokeWidth});
+    opacity: 1;
   }
   .overlay-label, .seiza-overlay__label {
     stroke: var(--seiza-overlay-label-halo-color, rgba(0, 0, 0, .88));
@@ -211,7 +232,11 @@ export function AstroOverlay({
         const identifiedStar = object.kind === 'identified-star'
         const transient = object.kind === 'transient'
         const moving = object.kind === 'comet' || object.kind === 'asteroid'
-        const color = colorForObject?.(object) ?? objectColor(object)
+        const consumerColor = colorForObject?.(object)
+        const color = consumerColor ?? objectColor(object)
+        const satellite = object.kind === 'satellite'
+        const satelliteRisk = satelliteTrackRiskLevelForObject(object)
+        const satelliteAligned = satelliteTrackHasPixelAlignment(object)
         const a = Math.max(object.semi_major_px, fontSize)
         const b = Math.max(object.semi_minor_px, fontSize)
         const outlinePaths = (object.outlines ?? []).flatMap((outline, outlineIndex) =>
@@ -222,9 +247,12 @@ export function AstroOverlay({
               key: `${outline.geometry_id ?? outlineIndex}-${contourIndex}`,
               geometryId: outline.geometry_id,
               level: outline.level,
+              role: outline.role,
+              quality: outline.quality,
             }]
           }),
         )
+        if (satellite && outlinePaths.length === 0) return null
         const vectorLength = moving
           ? movingBodyVectorLength(
             a,
@@ -269,14 +297,34 @@ export function AstroOverlay({
             stroke={color}
             d={`M ${object.x - a} ${object.y} H ${object.x - a / 3} M ${object.x + a / 3} ${object.y} H ${object.x + a}`}
           /> : outlinePaths.length > 0 ? <g className="seiza-overlay__outlines">
-            {outlinePaths.map((outline) => <path
-              key={outline.key}
-              className="object-marker seiza-overlay__marker seiza-overlay__marker--outline"
-              data-geometry-id={outline.geometryId}
-              data-outline-level={outline.level ?? undefined}
-              stroke={color}
-              d={outline.path}
-            />)}
+            {outlinePaths.map((outline) => {
+              const alignedOutline = satellite && outline.role === 'pixel-aligned-track'
+              const predictedOutline = satellite && outline.role === 'predicted-track'
+              const outlineColor = alignedOutline
+                ? 'var(--seiza-overlay-satellite-aligned-color, #7cff6b)'
+                : consumerColor ?? (predictedOutline ? satelliteRiskColor(satelliteRisk) : color)
+              const outlineClass = [
+                'object-marker',
+                'seiza-overlay__marker',
+                'seiza-overlay__marker--outline',
+                satellite && 'seiza-overlay__marker--satellite',
+                predictedOutline && satelliteRisk === 'high' && 'seiza-overlay__marker--satellite-high',
+                predictedOutline && (satelliteRisk === 'low' || satelliteAligned) && 'seiza-overlay__marker--satellite-dashed',
+                predictedOutline && satelliteAligned && 'seiza-overlay__marker--satellite-with-alignment',
+                alignedOutline && 'seiza-overlay__marker--satellite-aligned',
+              ].filter(Boolean).join(' ')
+              return <path
+                key={outline.key}
+                className={outlineClass}
+                data-geometry-id={outline.geometryId}
+                data-outline-level={outline.level ?? undefined}
+                data-outline-role={outline.role}
+                data-outline-quality={outline.quality}
+                data-satellite-risk={predictedOutline ? satelliteRisk : undefined}
+                stroke={outlineColor}
+                d={outline.path}
+              />
+            })}
           </g> : <ellipse
             className="object-marker seiza-overlay__marker seiza-overlay__marker--extended"
             stroke={color}
@@ -313,11 +361,23 @@ function objectColor(object: OverlayObject) {
   if (object.kind === 'comet') return 'var(--seiza-overlay-comet-color, #7bffd0)'
   if (object.kind === 'asteroid') return 'var(--seiza-overlay-asteroid-color, #ffb36b)'
   if (object.kind === 'transient') return 'var(--seiza-overlay-transient-color, #ff7be0)'
+  if (object.kind === 'satellite') {
+    if (satelliteTrackHasPixelAlignment(object)) {
+      return 'var(--seiza-overlay-satellite-aligned-color, #7cff6b)'
+    }
+    return satelliteRiskColor(satelliteTrackRiskLevelForObject(object))
+  }
   if (object.kind === 'identified-star') return 'var(--seiza-overlay-identified-star-color, #b7a6ff)'
   if (object.kind === 'star' || object.kind === 'double-star') {
     return 'var(--seiza-overlay-named-star-color, #ffd479)'
   }
   return 'var(--seiza-overlay-deep-sky-color, #5fd3ff)'
+}
+
+function satelliteRiskColor(level: ReturnType<typeof satelliteTrackRiskLevelForObject>) {
+  if (level === 'high') return 'var(--seiza-overlay-satellite-high-color, #ff4d5a)'
+  if (level === 'possible') return 'var(--seiza-overlay-satellite-possible-color, #ffd166)'
+  return 'var(--seiza-overlay-satellite-low-color, #43d9e6)'
 }
 
 function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
@@ -332,17 +392,27 @@ function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
     '--seiza-overlay-transient-color': theme.transientColor,
     '--seiza-overlay-comet-color': theme.cometColor,
     '--seiza-overlay-asteroid-color': theme.asteroidColor,
+    '--seiza-overlay-satellite-low-color': theme.satelliteLowColor,
+    '--seiza-overlay-satellite-possible-color': theme.satellitePossibleColor,
+    '--seiza-overlay-satellite-high-color': theme.satelliteHighColor,
+    '--seiza-overlay-satellite-aligned-color': theme.satelliteAlignedColor,
     '--seiza-overlay-center-color': theme.centerColor,
     '--seiza-overlay-label-halo-color': theme.labelHaloColor,
     '--seiza-overlay-encompassing-color': theme.encompassingColor,
     '--seiza-overlay-grid-stroke-width': theme.gridStrokeWidth,
     '--seiza-overlay-marker-stroke-width': theme.markerStrokeWidth,
     '--seiza-overlay-moving-marker-stroke-width': theme.movingMarkerStrokeWidth,
+    '--seiza-overlay-satellite-track-stroke-width': theme.satelliteTrackStrokeWidth,
+    '--seiza-overlay-satellite-high-risk-stroke-width': theme.satelliteHighRiskStrokeWidth,
+    '--seiza-overlay-satellite-aligned-stroke-width': theme.satelliteAlignedStrokeWidth,
     '--seiza-overlay-field-star-stroke-width': theme.fieldStarStrokeWidth,
     '--seiza-overlay-center-stroke-width': theme.centerStrokeWidth,
     '--seiza-overlay-grid-opacity': theme.gridOpacity,
     '--seiza-overlay-marker-opacity': theme.markerOpacity,
+    '--seiza-overlay-satellite-prediction-opacity': theme.satellitePredictionOpacity,
+    '--seiza-overlay-satellite-aligned-prediction-opacity': theme.satelliteAlignedPredictionOpacity,
     '--seiza-overlay-grid-dasharray': theme.gridDasharray,
+    '--seiza-overlay-satellite-track-dasharray': theme.satelliteTrackDasharray,
     '--seiza-overlay-label-font-family': theme.labelFontFamily,
     '--seiza-overlay-grid-font-family': theme.gridFontFamily,
     '--seiza-overlay-label-font-weight': theme.labelFontWeight,
