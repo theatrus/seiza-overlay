@@ -15,11 +15,17 @@ import {
   pixelScaleFromWcs,
 } from './core.js'
 import {
+  constellationLabelPoint,
+  constellationLabelText,
+  constellationLinePaths,
+} from './constellations.js'
+import {
   satelliteTrackHasPixelAlignment,
   satelliteTrackRiskLevelForObject,
 } from './satellites.js'
 import type {
   MovingBodyVectorOptions,
+  OverlayConstellation,
   OverlayLabelFormatter,
   OverlayColorResolver,
   OverlayLayerResolver,
@@ -46,6 +52,26 @@ const embeddedStyles = `
     paint-order: stroke;
     font-family: var(--seiza-overlay-grid-font-family, ui-monospace, monospace);
     font-weight: var(--seiza-overlay-grid-font-weight, ${defaultOverlayTheme.gridFontWeight});
+  }
+  .seiza-overlay__constellation-line {
+    fill: none;
+    stroke: var(--seiza-overlay-constellation-color, ${defaultOverlayTheme.constellationColor});
+    stroke-width: var(--seiza-overlay-constellation-stroke-width, ${defaultOverlayTheme.constellationStrokeWidth});
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: var(--seiza-overlay-constellation-opacity, ${defaultOverlayTheme.constellationOpacity});
+    vector-effect: non-scaling-stroke;
+  }
+  .seiza-overlay__constellation-label, .seiza-overlay__constellation-attribution {
+    fill: var(--seiza-overlay-constellation-label-color, ${defaultOverlayTheme.constellationLabelColor});
+    stroke: var(--seiza-overlay-label-halo-color, rgba(0, 0, 0, .88));
+    stroke-width: var(--seiza-overlay-label-halo-width, ${defaultOverlayTheme.labelHaloWidthEm}em);
+    paint-order: stroke;
+    font-family: var(--seiza-overlay-label-font-family, ui-sans-serif, system-ui, sans-serif);
+    font-weight: var(--seiza-overlay-label-font-weight, ${defaultOverlayTheme.labelFontWeight});
+  }
+  .seiza-overlay__constellation-label {
+    letter-spacing: .18em;
   }
   .field-stars circle, .seiza-overlay__field-star {
     fill: none;
@@ -111,6 +137,16 @@ export interface AstroOverlayProps extends Omit<SVGProps<SVGSVGElement>, 'childr
   theme?: OverlayTheme
   /** Scale speed-aware body vectors; fixed legacy tails remain when speed is absent. */
   movingBodyVectors?: MovingBodyVectorOptions
+  /** Projected stick figures; defaults to `solution.constellations`. */
+  constellations?: readonly OverlayConstellation[]
+  /** Data credit; defaults to `solution.constellation_attribution`. */
+  constellationAttribution?: string
+  /**
+   * Draw the constellation credit as small text in the lower-right corner,
+   * so it also appears in PNG exports. The credit is always written to the
+   * SVG as a `<desc>`; hosts that leave this off must show it elsewhere.
+   */
+  showConstellationAttribution?: boolean
   showCenter?: boolean
 }
 
@@ -125,6 +161,9 @@ export function AstroOverlay({
   colorForObject,
   theme,
   movingBodyVectors,
+  constellations = solution.constellations ?? [],
+  constellationAttribution = solution.constellation_attribution,
+  showConstellationAttribution = false,
   showCenter = true,
   className,
   style,
@@ -151,7 +190,7 @@ export function AstroOverlay({
   const pixelScale = solution.pixel_scale_arcsec_per_pixel
     ?? (solution.wcs ? pixelScaleFromWcs(solution.wcs) : null)
   const frameId = `seiza-overlay-frame-${useId().replace(/:/g, '')}`
-  const placedLabels: Array<{ x: number; y: number; halfWidth: number }> = []
+  const placedLabels: Array<{ x: number; y: number; halfWidth: number; halfHeight: number }> = []
   const rootStyle: ThemeStyle = { ...themeVariables(theme), ...style }
 
   const labelPosition = (object: OverlayObject) => {
@@ -173,9 +212,69 @@ export function AstroOverlay({
       y -= fontSize * 1.4
     }
     y = clamp(y, fontSize * 1.1, height - fontSize * 0.35)
-    placedLabels.push({ x, y, halfWidth })
+    placedLabels.push({ x, y, halfWidth, halfHeight: fontSize * 0.65 })
     return { x, y }
   }
+
+  // Place object labels first so constellation names yield to them.
+  const renderedObjects = partitioned.rendered.flatMap((object) => {
+    const outlinePaths = (object.outlines ?? []).flatMap((outline, outlineIndex) =>
+      outline.contours.flatMap((contour, contourIndex) => {
+        const path = overlayContourPath(contour)
+        return path == null ? [] : [{
+          path,
+          key: `${outline.geometry_id ?? outlineIndex}-${contourIndex}`,
+          geometryId: outline.geometry_id,
+          level: outline.level,
+          role: outline.role,
+          quality: outline.quality,
+        }]
+      }),
+    )
+    if (object.kind === 'satellite' && outlinePaths.length === 0) return []
+    return [{ object, outlinePaths, label: labelPosition(object) }]
+  })
+  if (partitioned.encompassing.length > 0) {
+    const caption = `Field within: ${partitioned.encompassing.map(labelForObject).join(' · ')}`
+    const halfWidth = caption.length * fontSize * 0.275
+    placedLabels.push({ x: fontSize + halfWidth, y: height - fontSize, halfWidth, halfHeight: fontSize * 0.65 })
+  }
+
+  const showConstellations = mergedLayers.constellations === true
+  const constellationFontSize = Math.round(fontSize * 0.8 * 100) / 100
+  const renderedConstellations = showConstellations
+    ? constellations.map((constellation) => {
+      const paths = constellationLinePaths(constellation)
+      const point = constellationLabelPoint(constellation)
+      const text = constellationLabelText(constellation)
+      let label: { x: number; y: number; text: string } | null = null
+      if (point && text) {
+        // Spaced capitals run wider than mixed-case object labels.
+        const halfWidth = text.length * constellationFontSize * 0.42
+        const halfHeight = constellationFontSize * 0.65
+        const x = clamp(point[0], halfWidth, width - halfWidth)
+        const y = clamp(point[1], constellationFontSize, height - constellationFontSize * 0.35)
+        const collision = placedLabels.some((placed) =>
+          Math.abs(placed.y - y) < placed.halfHeight + halfHeight
+          && Math.abs(placed.x - x) < placed.halfWidth + halfWidth,
+        )
+        if (!collision) {
+          placedLabels.push({ x, y, halfWidth, halfHeight })
+          label = { x, y, text }
+        }
+      }
+      return { constellation, paths, label }
+    })
+    : []
+  const attributionText = showConstellations && constellations.length > 0
+    ? constellationAttribution?.trim() || null
+    : null
+  const attributionFontSize = attributionText
+    ? Math.min(
+      Math.max(width / 160, 9),
+      (width - fontSize) / Math.max(attributionText.length * 0.52, 1),
+    )
+    : 0
 
   return <svg
     {...svgProps}
@@ -210,6 +309,43 @@ export function AstroOverlay({
         >{curve.label}</text>)}
       </g>
     </g>}
+    {renderedConstellations.length > 0 && <g
+      className="seiza-overlay__constellations"
+      data-layer="constellations"
+    >
+      {attributionText && <desc>{attributionText}</desc>}
+      <g clipPath={`url(#${frameId})`} className="seiza-overlay__constellation-lines">
+        {renderedConstellations.map(({ constellation, paths }, index) => paths.length > 0 && <g
+          key={`${constellation.abbreviation}-${index}`}
+          className="seiza-overlay__constellation"
+          data-constellation={constellation.abbreviation}
+        >
+          {paths.map((path, pathIndex) => <path
+            key={pathIndex}
+            className="seiza-overlay__constellation-line"
+            d={path}
+          />)}
+        </g>)}
+      </g>
+      <g className="seiza-overlay__constellation-labels">
+        {renderedConstellations.map(({ constellation, label }, index) => label && <text
+          key={`${constellation.abbreviation}-${index}`}
+          className="seiza-overlay__constellation-label"
+          data-constellation={constellation.abbreviation}
+          x={label.x}
+          y={label.y}
+          textAnchor="middle"
+          fontSize={constellationFontSize}
+        >{label.text}</text>)}
+      </g>
+      {showConstellationAttribution && attributionText && <text
+        className="seiza-overlay__constellation-attribution"
+        x={width - fontSize * 0.5}
+        y={height - fontSize * 0.5}
+        textAnchor="end"
+        fontSize={attributionFontSize}
+      >{attributionText}</text>}
+    </g>}
     <g className="field-stars seiza-overlay__field-stars">
       {partitioned.fieldStars.map((star, index) => <circle
         className="seiza-overlay__field-star"
@@ -227,7 +363,7 @@ export function AstroOverlay({
       fontSize={fontSize}
     >Field within: {partitioned.encompassing.map(labelForObject).join(' · ')}</text>}
     <g className="catalog-objects seiza-overlay__objects">
-      {partitioned.rendered.map((object, index) => {
+      {renderedObjects.map(({ object, outlinePaths, label }, index) => {
         const namedStar = object.kind === 'star' || object.kind === 'double-star'
         const identifiedStar = object.kind === 'identified-star'
         const transient = object.kind === 'transient'
@@ -239,20 +375,6 @@ export function AstroOverlay({
         const satelliteAligned = satelliteTrackHasPixelAlignment(object)
         const a = Math.max(object.semi_major_px, fontSize)
         const b = Math.max(object.semi_minor_px, fontSize)
-        const outlinePaths = (object.outlines ?? []).flatMap((outline, outlineIndex) =>
-          outline.contours.flatMap((contour, contourIndex) => {
-            const path = overlayContourPath(contour)
-            return path == null ? [] : [{
-              path,
-              key: `${outline.geometry_id ?? outlineIndex}-${contourIndex}`,
-              geometryId: outline.geometry_id,
-              level: outline.level,
-              role: outline.role,
-              quality: outline.quality,
-            }]
-          }),
-        )
-        if (satellite && outlinePaths.length === 0) return null
         const vectorLength = moving
           ? movingBodyVectorLength(
             a,
@@ -271,7 +393,6 @@ export function AstroOverlay({
             vectorLength,
           )
           : null
-        const label = labelPosition(object)
         return <g
           key={objectKey(object, index)}
           data-kind={object.kind}
@@ -399,6 +520,8 @@ function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
     '--seiza-overlay-center-color': theme.centerColor,
     '--seiza-overlay-label-halo-color': theme.labelHaloColor,
     '--seiza-overlay-encompassing-color': theme.encompassingColor,
+    '--seiza-overlay-constellation-color': theme.constellationColor,
+    '--seiza-overlay-constellation-label-color': theme.constellationLabelColor,
     '--seiza-overlay-grid-stroke-width': theme.gridStrokeWidth,
     '--seiza-overlay-marker-stroke-width': theme.markerStrokeWidth,
     '--seiza-overlay-moving-marker-stroke-width': theme.movingMarkerStrokeWidth,
@@ -407,10 +530,12 @@ function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
     '--seiza-overlay-satellite-aligned-stroke-width': theme.satelliteAlignedStrokeWidth,
     '--seiza-overlay-field-star-stroke-width': theme.fieldStarStrokeWidth,
     '--seiza-overlay-center-stroke-width': theme.centerStrokeWidth,
+    '--seiza-overlay-constellation-stroke-width': theme.constellationStrokeWidth,
     '--seiza-overlay-grid-opacity': theme.gridOpacity,
     '--seiza-overlay-marker-opacity': theme.markerOpacity,
     '--seiza-overlay-satellite-prediction-opacity': theme.satellitePredictionOpacity,
     '--seiza-overlay-satellite-aligned-prediction-opacity': theme.satelliteAlignedPredictionOpacity,
+    '--seiza-overlay-constellation-opacity': theme.constellationOpacity,
     '--seiza-overlay-grid-dasharray': theme.gridDasharray,
     '--seiza-overlay-satellite-track-dasharray': theme.satelliteTrackDasharray,
     '--seiza-overlay-label-font-family': theme.labelFontFamily,
@@ -425,6 +550,7 @@ function themeVariables(theme: OverlayTheme | undefined): ThemeStyle {
 
 export type {
   OverlayColorResolver,
+  OverlayConstellation,
   OverlayLayerVisibility,
   OverlayObject,
   OverlaySolution,

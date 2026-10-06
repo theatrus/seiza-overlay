@@ -39,7 +39,7 @@ import { AstroOverlay } from '@seiza/astro-overlay/react'
         segments: track.segments,
       })),
     ]}
-    layers={{ ...defaultOverlayLayers, field_stars: false }}
+    layers={{ ...defaultOverlayLayers, field_stars: false, constellations: true }}
     density={defaultOverlayDensity}
     movingBodyVectors={{ durationHours: 3 }}
     colorForObject={suggestedDeepSkyColorForObject}
@@ -83,6 +83,36 @@ dashed cyan, possible paths are amber, high-risk paths are red, and aligned
 pixel evidence is a distinct solid green. The adapter never turns a prediction
 into a pixel detection. `suggestedSatelliteTrackColors`, typed theme fields,
 and stable CSS variables allow applications to tune this presentation.
+
+Constellation stick figures use the `constellations` layer, which is off by
+default; switch it on with `layers={{ constellations: true }}`. The server
+sends the figures already projected and clipped to the image, beside
+`objects` in the same solution:
+
+```ts
+constellations?: Array<{
+  abbreviation: string                    // IAU three-letter code, e.g. "Cas"
+  name: string                            // e.g. "Cassiopeia"
+  lines: Array<Array<[number, number]>>   // pixel polylines, same frame as object x/y
+  label?: [number, number] | null         // name position; null when off-image
+}>
+constellation_attribution?: string
+```
+
+`AstroOverlay` reads `solution.constellations` unless the `constellations` prop
+overrides it. Each polyline becomes one thin path, drawn under every marker and
+label in light blue (`#96beff` at `0.75` opacity, `1.25px`). Names appear in
+small spaced capitals at `label`, are skipped when `label` is null, and give
+way to object labels: a name that would overlap one is left out. The
+`constellationColor`, `constellationLabelColor`, `constellationOpacity`, and
+`constellationStrokeWidth` theme fields change this styling.
+
+The line data is the Constellation Lines dataset by Marc van der Sluys,
+licensed CC BY 4.0, so a host that draws constellations must show
+`constellation_attribution`. The overlay always writes it into the SVG as a
+`<desc>`. Pass `showConstellationAttribution` to also draw it as small text in
+the lower-right corner, where it carries into PNG exports; otherwise show the
+credit in the application's own chrome.
 
 The application owns the transformed image container, controls, control
 placement, layer persistence, API calls, and branding. Stable

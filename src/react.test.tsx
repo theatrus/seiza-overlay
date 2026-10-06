@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { AstroOverlay } from './react.js'
 import { suggestedDeepSkyColorForObject } from './catalogs.js'
 import { satelliteTrackOverlayObject } from './satellites.js'
-import type { OverlaySolution } from './types.js'
+import type { OverlayConstellation, OverlaySolution } from './types.js'
 
 const objectOnlySolution: OverlaySolution = {
   image_width: 800,
@@ -213,5 +213,95 @@ describe('AstroOverlay', () => {
     expect(markup).not.toContain('data-kind="satellite"')
     expect(markup).not.toContain('seiza-overlay__marker--extended')
     expect(markup).not.toContain('NORAD 1')
+  })
+
+  describe('constellations', () => {
+    const constellations: OverlayConstellation[] = [
+      {
+        abbreviation: 'Cas',
+        name: 'Cassiopeia',
+        lines: [
+          [[0, 10], [40, 30], [80, 15]],
+          [[80, 15], [120, 40]],
+        ],
+        label: [700, 500],
+      },
+      {
+        abbreviation: 'Cep',
+        name: 'Cepheus',
+        lines: [[[200, 100], [260, 150]]],
+        label: null,
+      },
+    ]
+    const solution: OverlaySolution = {
+      ...objectOnlySolution,
+      constellations,
+      constellation_attribution: 'Constellation Lines dataset by Marc van der Sluys. Licensed under CC BY 4.0.',
+    }
+    const render = (props: Partial<Parameters<typeof AstroOverlay>[0]> = {}) =>
+      renderToStaticMarkup(createElement(AstroOverlay, {
+        solution,
+        layers: { constellations: true },
+        showCenter: false,
+        ...props,
+      }))
+
+    it('is hidden unless the layer is switched on', () => {
+      const markup = renderToStaticMarkup(createElement(AstroOverlay, { solution }))
+      expect(markup).not.toContain('seiza-overlay__constellation-line"')
+      expect(render({ layers: { constellations: false } })).not.toContain('seiza-overlay__constellations')
+    })
+
+    it('draws one path per polyline beneath object markers and labels', () => {
+      const markup = render()
+      expect(markup.match(/class="seiza-overlay__constellation-line"/g)).toHaveLength(3)
+      expect(markup).toContain('d="M 0.00 10.00 L 40.00 30.00 L 80.00 15.00"')
+      expect(markup).toContain('d="M 80.00 15.00 L 120.00 40.00"')
+      expect(markup).toContain('data-constellation="Cep"')
+      expect(markup.indexOf('seiza-overlay__constellations'))
+        .toBeLessThan(markup.indexOf('seiza-overlay__objects'))
+      expect(markup).toContain('stroke-width: var(--seiza-overlay-constellation-stroke-width, 1.25)')
+      expect(markup).toContain('opacity: var(--seiza-overlay-constellation-opacity, 0.75)')
+    })
+
+    it('names constellations in capitals and skips null label positions', () => {
+      const markup = render()
+      expect(markup).toContain('>CASSIOPEIA</text>')
+      expect(markup).not.toContain('CEPHEUS')
+      expect(markup.match(/class="seiza-overlay__constellation-label"/g)).toHaveLength(1)
+    })
+
+    it('yields constellation names to object labels', () => {
+      // The Andromeda label sits above its marker at (400, 233).
+      const markup = render({
+        constellations: [{ ...constellations[0]!, label: [400, 233] }],
+      })
+      expect(markup).toContain('NGC 224 · Andromeda Galaxy')
+      expect(markup).not.toContain('CASSIOPEIA')
+      expect(markup).toContain('seiza-overlay__constellation-line')
+    })
+
+    it('records the data credit and can draw it for exports', () => {
+      expect(render()).toContain('<desc>Constellation Lines dataset by Marc van der Sluys.')
+      expect(render()).not.toContain('class="seiza-overlay__constellation-attribution"')
+      const markup = render({ showConstellationAttribution: true })
+      expect(markup).toContain('class="seiza-overlay__constellation-attribution"')
+      expect(markup).toContain('text-anchor="end"')
+    })
+
+    it('writes constellation theme overrides inline', () => {
+      const markup = render({
+        theme: {
+          constellationColor: '#123456',
+          constellationLabelColor: '#abcdef',
+          constellationOpacity: 0.4,
+          constellationStrokeWidth: 2,
+        },
+      })
+      expect(markup).toContain('--seiza-overlay-constellation-color:#123456')
+      expect(markup).toContain('--seiza-overlay-constellation-label-color:#abcdef')
+      expect(markup).toContain('--seiza-overlay-constellation-opacity:0.4')
+      expect(markup).toContain('--seiza-overlay-constellation-stroke-width:2')
+    })
   })
 })

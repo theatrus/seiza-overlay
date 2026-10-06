@@ -23,6 +23,8 @@ The package owns:
   center marker SVG geometry;
 - canonical satellite prediction-to-outline conversion, including separate
   pixel-alignment evidence and risk-aware suggested presentation;
+- constellation stick figures and names from server-projected pixel
+  polylines, with the data credit kept in the SVG;
 - label collision handling and frame-encompassing captions; and
 - live-SVG serialization plus browser canvas PNG compositing.
 
@@ -33,7 +35,9 @@ The consuming application owns:
 - image zoom/pan layout and the transformed container holding image plus SVG;
 - alternative catalog grouping, layer, or color resolvers when its conventions
   differ from the suggested defaults; and
-- branding, watermarks, and other PNG decorations.
+- branding, watermarks, and other PNG decorations; and
+- showing `constellation_attribution` when it draws constellations without
+  the overlay's own credit text.
 
 The split is deliberate. Tenrankai can retain its catalog dropdown and density
 slider, seiza-server can retain its explicit layer buttons, and PSF Guard can
@@ -57,6 +61,34 @@ exported `suggestedDeepSkyColorForObject` uses the package's catalog palette and
 returns `undefined` for non-deep-sky objects, preserving their theme colors.
 This makes catalog-colored outlines and labels serialize directly into SVG and
 PNG output without post-render DOM mutations.
+
+## Constellations
+
+Seiza-server projects the constellation lines; the package only draws them.
+The annotations response carries two optional fields beside `objects`, in the
+same snake_case style:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `constellations` | `OverlayConstellation[]` | One entry per figure in view |
+| `constellations[].abbreviation` | `string` | IAU three-letter code, e.g. `Cas` |
+| `constellations[].name` | `string` | Display name, e.g. `Cassiopeia` |
+| `constellations[].lines` | `Array<Array<[number, number]>>` | Pixel polylines in the solved image frame, zero-based pixel centres, already clipped to the image |
+| `constellations[].label` | `[number, number] \| null` | Name position in pixels; null when off-image |
+| `constellation_attribution` | `string` | Credit for the line data, which is CC BY 4.0 |
+
+The `constellations` layer is off by default, like the other context layers
+that add line work across the whole frame (`field_stars`,
+`star_identifiers`). Seiza-server turns it on. Lines draw after the grid and
+before field stars, markers, and labels. Object labels are placed first;
+a constellation name that would overlap one, or an earlier name, is dropped
+rather than moved, since the lines already show where the figure is.
+
+The credit always goes into the SVG as a `<desc>`. Hosts either set
+`showConstellationAttribution` to draw it in the lower-right corner, which
+also puts it in PNG exports, or show it elsewhere. PNG export needs no other
+change: the lines are ordinary SVG paths, and the four constellation theme
+variables are copied inline with the rest when the SVG is serialized.
 
 ## Application adapters
 
