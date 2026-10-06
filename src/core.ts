@@ -35,6 +35,10 @@ export const defaultOverlayTheme: Readonly<OverlayTheme> = Object.freeze({
   satellitePredictionOpacity: 1,
   satelliteAlignedPredictionOpacity: 0.72,
   satelliteTrackDasharray: '8 6',
+  constellationColor: '#96beff',
+  constellationLabelColor: '#9aabc8',
+  constellationOpacity: 0.75,
+  constellationStrokeWidth: 1.25,
 })
 
 /** Fraction of ranked objects shown when a consumer does not choose a density. */
@@ -56,6 +60,7 @@ export const defaultOverlayLayers: Readonly<Record<DefaultOverlayLayerId, boolea
   minor_bodies: true,
   satellite_tracks: true,
   historical_transients: false,
+  constellations: false,
   grid: true,
 }
 

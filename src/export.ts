@@ -1,4 +1,5 @@
-const overlayThemeVariables = [
+/** CSS custom properties copied inline when the live SVG is serialized. */
+export const overlayThemeVariables = [
   '--seiza-overlay-grid-color',
   '--seiza-overlay-grid-label-color',
   '--seiza-overlay-field-star-color',
@@ -11,13 +12,17 @@ const overlayThemeVariables = [
   '--seiza-overlay-center-color',
   '--seiza-overlay-label-halo-color',
   '--seiza-overlay-encompassing-color',
+  '--seiza-overlay-constellation-color',
+  '--seiza-overlay-constellation-label-color',
   '--seiza-overlay-grid-stroke-width',
   '--seiza-overlay-marker-stroke-width',
   '--seiza-overlay-moving-marker-stroke-width',
   '--seiza-overlay-field-star-stroke-width',
   '--seiza-overlay-center-stroke-width',
+  '--seiza-overlay-constellation-stroke-width',
   '--seiza-overlay-grid-opacity',
   '--seiza-overlay-marker-opacity',
+  '--seiza-overlay-constellation-opacity',
   '--seiza-overlay-grid-dasharray',
   '--seiza-overlay-label-font-family',
   '--seiza-overlay-grid-font-family',

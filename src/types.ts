@@ -7,6 +7,7 @@ export type DefaultOverlayLayerId =
   | 'minor_bodies'
   | 'satellite_tracks'
   | 'historical_transients'
+  | 'constellations'
   | 'grid'
 
 export type OverlayLayerVisibility = Readonly<Record<string, boolean | undefined>>
@@ -67,6 +68,22 @@ export interface OverlayObject {
   outlines?: readonly OverlayOutline[]
 }
 
+/**
+ * One constellation stick figure, already projected into the solved image
+ * frame by the server. Coordinates are zero-based pixel centres, the same
+ * frame as `OverlayObject` x/y.
+ */
+export interface OverlayConstellation {
+  /** IAU three-letter abbreviation, e.g. `Cas`. */
+  abbreviation: string
+  /** Display name, e.g. `Cassiopeia`. */
+  name: string
+  /** Pixel polylines, already clipped to the image; they may touch the edges. */
+  lines: Array<Array<[number, number]>>
+  /** Suggested name position in pixels; null or absent when off-image. */
+  label?: [number, number] | null
+}
+
 export interface OverlaySolution {
   center_ra_deg?: number
   center_dec_deg?: number
@@ -80,6 +97,12 @@ export interface OverlaySolution {
   objects?: OverlayObject[]
   catalog_version?: string
   capture_time?: string
+  constellations?: OverlayConstellation[]
+  /**
+   * Credit for the constellation line data. The data is licensed CC BY 4.0,
+   * so hosts that draw constellations must display this text.
+   */
+  constellation_attribution?: string
 }
 
 export type OverlaySolutionWithWcs = OverlaySolution & { wcs: WcsSolution }
@@ -110,6 +133,8 @@ export interface OverlayTheme {
   centerColor?: string
   labelHaloColor?: string
   encompassingColor?: string
+  constellationColor?: string
+  constellationLabelColor?: string
   gridStrokeWidth?: number
   markerStrokeWidth?: number
   movingMarkerStrokeWidth?: number
@@ -118,10 +143,12 @@ export interface OverlayTheme {
   satelliteAlignedStrokeWidth?: number
   fieldStarStrokeWidth?: number
   centerStrokeWidth?: number
+  constellationStrokeWidth?: number
   gridOpacity?: number
   markerOpacity?: number
   satellitePredictionOpacity?: number
   satelliteAlignedPredictionOpacity?: number
+  constellationOpacity?: number
   gridDasharray?: string
   satelliteTrackDasharray?: string
   labelFontFamily?: string
