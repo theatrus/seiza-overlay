@@ -7,6 +7,7 @@ import {
   defaultOverlayLayers,
   defaultOverlayTheme,
   gridLabelFontSize,
+  labelFontSize,
   makeCoordinateGrid,
   movingBodyTail,
   movingBodyVectorLength,
@@ -195,7 +196,7 @@ export function AstroOverlay({
   )
   const magnification = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
   const gridFontSize = gridLabelFontSize(width) / magnification
-  const fontSize = Math.max(width / 75, 14) / magnification
+  const fontSize = labelFontSize(width) / magnification
   const pixelScale = solution.pixel_scale_arcsec_per_pixel
     ?? (solution.wcs ? pixelScaleFromWcs(solution.wcs) : null)
   const frameId = `seiza-overlay-frame-${useId().replace(/:/g, '')}`

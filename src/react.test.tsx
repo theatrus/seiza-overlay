@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AstroOverlay } from './react.js'
 import { suggestedDeepSkyColorForObject } from './catalogs.js'
+import { labelFontSize } from './core.js'
 import { satelliteTrackOverlayObject } from './satellites.js'
 import type { OverlayConstellation, OverlaySolution } from './types.js'
 
@@ -72,6 +73,7 @@ describe('AstroOverlay', () => {
       return { size: number('font-size'), gap: 1000 - number('y'), markup }
     }
     const fitted = label()
+    expect(fitted.size).toBe(labelFontSize(3000))
     const zoomed = label(4)
     expect(zoomed.size).toBeCloseTo(fitted.size / 4, 6)
     expect(zoomed.gap).toBeCloseTo(fitted.gap / 4, 6)
