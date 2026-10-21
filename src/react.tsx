@@ -148,6 +148,13 @@ export interface AstroOverlayProps extends Omit<SVGProps<SVGSVGElement>, 'childr
    */
   showConstellationAttribution?: boolean
   showCenter?: boolean
+  /**
+   * How much the host has magnified the overlay, as when it zooms an image
+   * by drawing it larger. Text, minimum marker sizes and the spacing of
+   * labels shrink by it, so they keep their on-screen size and stay beside
+   * their objects. Defaults to 1.
+   */
+  zoom?: number
 }
 
 export function AstroOverlay({
@@ -165,6 +172,7 @@ export function AstroOverlay({
   constellationAttribution = solution.constellation_attribution,
   showConstellationAttribution = false,
   showCenter = true,
+  zoom = 1,
   className,
   style,
   'aria-label': ariaLabel = 'Astronomical objects and coordinate grid',
@@ -185,8 +193,9 @@ export function AstroOverlay({
       : [],
     [mergedLayers.grid, solution],
   )
-  const gridFontSize = gridLabelFontSize(width)
-  const fontSize = Math.max(width / 75, 14)
+  const magnification = Number.isFinite(zoom) && zoom > 0 ? zoom : 1
+  const gridFontSize = gridLabelFontSize(width) / magnification
+  const fontSize = Math.max(width / 75, 14) / magnification
   const pixelScale = solution.pixel_scale_arcsec_per_pixel
     ?? (solution.wcs ? pixelScaleFromWcs(solution.wcs) : null)
   const frameId = `seiza-overlay-frame-${useId().replace(/:/g, '')}`
@@ -271,7 +280,7 @@ export function AstroOverlay({
     : null
   const attributionFontSize = attributionText
     ? Math.min(
-      Math.max(width / 160, 9),
+      Math.max(width / 160, 9) / magnification,
       (width - fontSize) / Math.max(attributionText.length * 0.52, 1),
     )
     : 0
@@ -352,7 +361,7 @@ export function AstroOverlay({
         key={objectKey(star, index)}
         cx={star.x}
         cy={star.y}
-        r={Math.max(width / 1300, 2.5)}
+        r={Math.max(width / 1300, 2.5) / magnification}
       />)}
     </g>
     {partitioned.encompassing.length > 0 && <text

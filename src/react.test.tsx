@@ -55,6 +55,34 @@ describe('AstroOverlay', () => {
     expect(markup).toContain('--seiza-overlay-label-halo-width:0.075em')
   })
 
+  it('keeps labels the same size on screen, and beside their objects, at any zoom', () => {
+    // A star: its label sits a font size above it, so its gap is all text.
+    const solution: OverlaySolution = {
+      image_width: 3000,
+      image_height: 2000,
+      objects: [{
+        name: 'HD 1', common_name: '', kind: 'star', x: 1500, y: 1000,
+        semi_major_px: 0, semi_minor_px: 0, angle_deg: null, prominence: 1,
+      }],
+    }
+    const label = (zoom?: number) => {
+      const markup = renderToStaticMarkup(createElement(AstroOverlay, { solution, density: 1, zoom }))
+      const text = markup.match(/<text class="overlay-label[^"]*"[^>]*>HD 1</)![0]
+      const number = (name: string) => Number(text.match(new RegExp(`${name}="([^"]+)"`))![1])
+      return { size: number('font-size'), gap: 1000 - number('y'), markup }
+    }
+    const fitted = label()
+    const zoomed = label(4)
+    expect(zoomed.size).toBeCloseTo(fitted.size / 4, 6)
+    expect(zoomed.gap).toBeCloseTo(fitted.gap / 4, 6)
+    // The star's marker shrinks with it.
+    const arm = (markup: string) => Number(markup.match(/d="M ([\d.]+) 1000 H/)![1])
+    expect(1500 - arm(zoomed.markup)).toBeCloseTo((1500 - arm(fitted.markup)) / 4, 6)
+    // Nonsense falls back to no zoom.
+    expect(label(0).size).toBe(fitted.size)
+    expect(label(Number.NaN).size).toBe(fitted.size)
+  })
+
   it('uses distinct clip paths when several overlays share one page', () => {
     const solution = {
       ...objectOnlySolution,
