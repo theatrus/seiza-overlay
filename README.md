@@ -114,6 +114,14 @@ licensed CC BY 4.0, so a host that draws constellations must show
 the lower-right corner, where it carries into PNG exports; otherwise show the
 credit in the application's own chrome.
 
+A host that zooms by drawing the image and overlay larger passes the
+magnification as `zoom`. Text, the smallest markers and the spacing of labels
+shrink by it, so labels keep their size on screen and stay beside their
+objects; lines already keep their width. Without it, labels grow with the
+image and drift away from what they label. `labelFontSize(width)` gives the
+label size in image pixels at zoom 1, for a host that wants labels to grow to
+a readable size before they hold it.
+
 The application owns the transformed image container, controls, control
 placement, layer persistence, API calls, and branding. Stable
 `seiza-overlay__*` classes and CSS custom properties allow application styling;

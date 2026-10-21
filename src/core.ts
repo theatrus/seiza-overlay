@@ -443,6 +443,14 @@ function gridCurve(
   }
 }
 
+/**
+ * Object label size, in image pixels, for an image `width` pixels across, at
+ * zoom 1. A host can work out the size labels will have on screen from it.
+ */
+export function labelFontSize(width: number) {
+  return Math.max(width / 75, 14)
+}
+
 export function gridLabelFontSize(width: number) {
   return Math.max(Math.min(Math.max(width / 60, 18), width / 18), 6)
 }
